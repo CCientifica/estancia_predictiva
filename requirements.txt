@@ -5,3 +5,5 @@ joblib
 plotly
 numpy
 streamlit-option-menu
+openpyxl
+xlrd
