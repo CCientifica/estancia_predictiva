@@ -3,6 +3,7 @@ import pandas as pd
 import joblib
 from datetime import datetime
 import os
+import io
 import plotly.express as px
 from streamlit_option_menu import option_menu
 
@@ -250,20 +251,21 @@ if selected == "Auditoría Masiva":
             st.info(f"Se cargaron {len(df_censo)} pacientes del censo.")
             
             # --- ESTANDARIZACIÓN DE MÚLTIPLES ESTRUCTURAS DE CENSO ---
-            # Limpiar espacios ocultos en los nombres de las columnas Ej: 'EDAD '
-            df_censo.columns = [str(c).strip() for c in df_censo.columns]
-            
-            mapeo_columnas = {
-                'FecIngreso': 'FechaIngreso',
-                'FECHA INGRESO': 'FechaIngreso',
-                'PabIngreso': 'PabellonIngreso',
-                'EspecTratante': 'Esp',
-                'ESPECIALIDAD TRATANTE': 'Esp',
-                'Dx1': 'Dx',
-                'COD. DIAG.': 'Dx',
-                'EDAD': 'edad'
-            }
-            df_censo = df_censo.rename(columns=mapeo_columnas)
+            # Limpiar espacios ocultos y hacer un mapeo más robusto (ignora mayúsculas/minúsculas)
+            columnas_nuevas = []
+            for col in df_censo.columns:
+                c_clean = str(col).strip().upper()
+                if c_clean == 'EDAD': columnas_nuevas.append('edad')
+                elif c_clean in ['FECINGRESO', 'FECHA INGRESO', 'FECHA INGRESO']: columnas_nuevas.append('FechaIngreso')
+                elif c_clean in ['PABINGRESO', 'PABELLON DE INGRESO']: columnas_nuevas.append('PabellonIngreso')
+                elif c_clean in ['ESPECTRATANTE', 'ESPECIALIDAD TRATANTE']: columnas_nuevas.append('Esp')
+                elif c_clean in ['DX1', 'COD. DIAG.', 'COD. DIAG']: columnas_nuevas.append('Dx')
+                elif c_clean == 'CAMA': columnas_nuevas.append('CAMA')
+                elif c_clean == 'SEXO': columnas_nuevas.append('Sexo')
+                elif c_clean in ['FECHANACIMIENTO', 'FECHA DE NACIMIENTO']: columnas_nuevas.append('FechaNacimiento')
+                else: columnas_nuevas.append(str(col).strip()) # Mantiene el original limpio
+                
+            df_censo.columns = columnas_nuevas
             
             # Mapeo Inteligente de Camas (Pabellones / Servicios)
             def clasificar_pabellon(cama):
@@ -461,20 +463,41 @@ if selected == "Auditoría Masiva":
             columnas_mostrar = ['edad', 'Dx_Agrupado', 'FechaIngreso', 'Dias_Actuales', 'Prediccion_Estancia', 'Estado_Auditoria']
             columnas_disponibles = [c for c in columnas_mostrar if c in df_censo.columns]
             
-            # Resaltar en rojo los pacientes desviados usando pandas styling
-            def resaltar_desviados(row):
-                if 'Desviado' in str(row.get('Estado_Auditoria', '')):
-                    return ['background-color: #ffdce0'] * len(row)
-                return [''] * len(row)
-                
-            st.dataframe(df_censo[columnas_disponibles].style.apply(resaltar_desviados, axis=1), use_container_width=True)
+            df_mostrar = df_censo[columnas_disponibles]
             
-            csv_exp = df_censo.to_csv(index=False).encode('utf-8')
+            # Resaltar en rojo los pacientes desviados usando pandas styling
+            def aplicar_estilos(styler):
+                styler.apply(lambda x: ['background-color: #ffdce0' if 'Desviado' in str(x.get('Estado_Auditoria', '')) else '' for _ in x], axis=1)
+                
+                # Colores institucionales para encabezados
+                styler.set_table_styles([
+                    {'selector': 'th', 'props': [('background-color', '#253d5b'), ('color', 'white'), ('font-weight', 'bold')]}
+                ])
+                return styler
+                
+            styled_df = df_mostrar.style.pipe(aplicar_estilos)
+            
+            st.dataframe(styled_df, use_container_width=True)
+            
+            # --- EXPORTAR A EXCEL (ESTILIZADO) ---
+            buffer = io.BytesIO()
+            with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
+                styled_df.to_excel(writer, index=False, sheet_name='Censo_Auditable')
+                
+                # Auto-ajustar ancho de columnas en Excel
+                worksheet = writer.sheets['Censo_Auditable']
+                for idx, col in enumerate(df_mostrar.columns):
+                    max_len = max(df_mostrar[col].astype(str).map(len).max(), len(str(col))) + 2
+                    worksheet.column_dimensions[chr(65 + idx)].width = max_len
+                    
+            excel_data = buffer.getvalue()
+            
             st.download_button(
-                label="Descargar Censo con Predicciones y Alertas",
-                data=csv_exp,
-                file_name='Censo_Predictivo_V3.csv',
-                mime='text/csv',
+                label="📥 Descargar Censo Completo (Excel con Colores)",
+                data=excel_data,
+                file_name='Censo_Predictivo_Institucional.xlsx',
+                mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                type='primary'
             )
             
         except Exception as e:
