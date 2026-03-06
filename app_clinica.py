@@ -3,6 +3,7 @@ import pandas as pd
 import joblib
 from datetime import datetime
 import os
+import plotly.express as px
 
 # 1. CONFIGURACIÓN DE PÁGINA Y DISEÑO
 try:
@@ -93,7 +94,9 @@ st.markdown("""
 # 2. CARGA DEL CEREBRO MATEMÁTICO
 @st.cache_resource
 def cargar_modelo():
-    if os.path.exists('modelo_estancia_v2.pkl') and os.path.exists('columnas_modelo_v2.pkl'):
+    if os.path.exists('modelo_estancia_v3.pkl') and os.path.exists('columnas_modelo_v3.pkl'):
+        return joblib.load('modelo_estancia_v3.pkl'), joblib.load('columnas_modelo_v3.pkl'), "V3"
+    elif os.path.exists('modelo_estancia_v2.pkl') and os.path.exists('columnas_modelo_v2.pkl'):
         return joblib.load('modelo_estancia_v2.pkl'), joblib.load('columnas_modelo_v2.pkl'), "V2"
     else:
         return joblib.load('modelo_estancia_v1.pkl'), joblib.load('columnas_modelo.pkl'), "V1"
@@ -116,7 +119,9 @@ with col_logo:
 with col_tit:
     st.title("Sistema de Alerta Temprana y Gestión de Camas")
     st.markdown("Plataforma analítica para la predicción de estancia hospitalaria (Length of Stay).")
-    if version_modelo == "V2":
+    if version_modelo == "V3":
+        st.caption("Motor Predictivo: Versión 3.0 (Alta Resolución con Minería Clínica)")
+    elif version_modelo == "V2":
         st.caption("Motor Predictivo: Versión 2.0 (Alta Precisión Clínica)")
 
 st.markdown("---")
@@ -138,12 +143,12 @@ with tab_individual:
         pabellon = st.selectbox("Servicio / Pabellón", ["URGENCIAS", "CIRUGIA", "UCI", "HOSPITALIZACION", "TRIAGE"]) 
         esp = st.text_input("Especialidad (Ej. MEDICINA INTERNA)", "MEDICINA INTERNA").upper()
     with col3:
-        dx = st.text_input("Dx Principal CIE-10 (Primeras 3 letras, ej. J45)", "OTR").upper()
+        dx = st.text_input("Dx Principal CIE-10 (Hasta 4 letras, ej. J450)", "OTR").upper()[:4]
         
     st.markdown("<br>", unsafe_allow_html=True)
     st.markdown("**Comorbilidades Adicionales**")
     
-    col_c1, col_c2, col_c3, col_c4 = st.columns(4)
+    col_c1, col_c2, col_c3, col_c4, col_c5 = st.columns(5)
     with col_c1:
         diabetes = st.checkbox("Diabetes")
         hipertension = st.checkbox("Hipertensión")
@@ -151,23 +156,27 @@ with tab_individual:
         cardiaca = st.checkbox("Enf. Cardíaca")
         epoc = st.checkbox("EPOC")
     with col_c3:
-        hemato_onco = st.checkbox("Hemato-Oncológica")
+        hemato_onco = st.checkbox("Cáncer / Oncológica")
         quimio = st.checkbox("En Quimioterapia")
     with col_c4:
         hemofilia = st.checkbox("Hemofilia")
         porfiria = st.checkbox("Porfiria")
+    with col_c5:
+        renal = st.checkbox("Enfermedad Renal")
+        vih = st.checkbox("VIH / SIDA")
 
     st.markdown("<br>", unsafe_allow_html=True)
     
     if st.button("Calcular Riesgo de Estancia", key="btn_indiv"):
-        total_comorbilidades = sum([diabetes, hipertension, cardiaca, epoc, hemato_onco, quimio, hemofilia, porfiria])
+        total_comorbilidades = sum([diabetes, hipertension, cardiaca, epoc, hemato_onco, quimio, hemofilia, porfiria, renal, vih])
         
-        if version_modelo == "V2":
+        if version_modelo in ["V2", "V3"]:
             datos = pd.DataFrame({
                 'edad': [edad], 'Sexo': [sexo], 'PabellonIngreso': [pabellon], 'Esp': [esp], 'Dx_Agrupado': [dx],
                 'Diabetes': [int(diabetes)], 'Hipertension': [int(hipertension)], 'Cardiaca': [int(cardiaca)], 
                 'EPOC': [int(epoc)], 'Hemato_Onco': [int(hemato_onco)], 'Quimio': [int(quimio)], 
                 'Hemofilia': [int(hemofilia)], 'Porfiria': [int(porfiria)], 
+                'Renal': [int(renal)], 'VIH': [int(vih)], 
                 'Total_Comorbilidades': [total_comorbilidades]
             })
         else:
@@ -209,8 +218,8 @@ with tab_masivo:
             
             st.info(f"Se cargaron {len(df_censo)} pacientes del censo.")
             
-            # Formato V2
-            if version_modelo == "V2":
+            # Formato V2 / V3
+            if version_modelo in ["V2", "V3"]:
                 if 'Dx2Nombre' in df_censo.columns and 'Dx3Nombre' in df_censo.columns:
                     df_censo['Texto_Dx'] = df_censo['Dx2Nombre'].fillna('').str.upper() + " " + df_censo['Dx3Nombre'].fillna('').str.upper()
                 else:
@@ -224,18 +233,22 @@ with tab_masivo:
                 df_censo['Quimio'] = df_censo['Texto_Dx'].str.contains('QUIMIO').astype(int)
                 df_censo['Hemofilia'] = df_censo['Texto_Dx'].str.contains('HEMOFILIA').astype(int)
                 df_censo['Porfiria'] = df_censo['Texto_Dx'].str.contains('PORFIRIA').astype(int)
+                df_censo['Renal'] = df_censo['Texto_Dx'].str.contains('RENAL|NEFRO').astype(int)
+                df_censo['VIH'] = df_censo['Texto_Dx'].str.contains('VIH|SIDA|INMUNODEFICIENCIA HUMANA').astype(int)
                 
-                cols_enfermedades = ['Diabetes', 'Hipertension', 'Cardiaca', 'EPOC', 'Hemato_Onco', 'Quimio', 'Hemofilia', 'Porfiria']
+                cols_enfermedades = ['Diabetes', 'Hipertension', 'Cardiaca', 'EPOC', 'Hemato_Onco', 'Quimio', 'Hemofilia', 'Porfiria', 'Renal', 'VIH']
                 df_censo['Total_Comorbilidades'] = df_censo[cols_enfermedades].sum(axis=1)
                 
                 if 'Dx' in df_censo.columns:
-                    df_censo['Dx_Agrupado'] = df_censo['Dx'].astype(str).str[:3]
+                    # Permitir 4 dígitos para V3, 3 para V2 (mantener compatibilidad)
+                    digits = 4 if version_modelo == "V3" else 3
+                    df_censo['Dx_Agrupado'] = df_censo['Dx'].astype(str).str[:digits]
                 else:
                     df_censo['Dx_Agrupado'] = "DESCONOCIDO"
                     
                 columnas_x = ['edad', 'Sexo', 'PabellonIngreso', 'Esp', 'Dx_Agrupado', 
                               'Diabetes', 'Hipertension', 'Cardiaca', 'EPOC', 'Hemato_Onco', 
-                              'Quimio', 'Hemofilia', 'Porfiria', 'Total_Comorbilidades']
+                              'Quimio', 'Hemofilia', 'Porfiria', 'Renal', 'VIH', 'Total_Comorbilidades']
             else:
                 if 'Dx' in df_censo.columns:
                     df_censo['Dx_Agrupado'] = df_censo['Dx'].astype(str).str[:3]
@@ -273,16 +286,75 @@ with tab_masivo:
                     
             df_censo['Estado_Auditoria'] = alertas
             
+            # --- SECCIÓN DE GRAFICACIÓN PROFESIONAL ---
+            st.markdown("### 📊 Tablero de Control de Riesgo y Ocupación")
+            
+            # Métricas Superiores
+            total_pacientes = len(df_censo)
+            desviados = sum(1 for a in alertas if "Desviado" in a)
+            riesgo_prolongado = sum(1 for p in df_censo['Prediccion_Estancia'] if "Prolongada" in str(p))
+            
+            # Usando columnas para los KPI
+            kpi1, kpi2, kpi3 = st.columns(3)
+            kpi1.metric(label="Pacientes Ingresados", value=total_pacientes)
+            kpi2.metric(label="Desviados (Superaron Límite Estimado)", value=desviados, delta=f"{(desviados/total_pacientes)*100:.1f}%", delta_color="inverse")
+            kpi3.metric(label="Predicción Estancias Prolongadas", value=riesgo_prolongado)
+            
+            # Gráficos con Plotly
+            st.markdown("<br>", unsafe_allow_html=True)
+            col_chart1, col_chart2 = st.columns(2)
+            
+            with col_chart1:
+                # Gráfico de Pastel: Distribución de Riesgos Predictivos
+                riesgo_counts = df_censo['Prediccion_Estancia'].value_counts().reset_index()
+                riesgo_counts.columns = ['Categoría de Estancia', 'Cantidad']
+                
+                fig_pie = px.pie(riesgo_counts, values='Cantidad', names='Categoría de Estancia', 
+                                 title='Distribución de Riesgo de Estancia',
+                                 color='Categoría de Estancia',
+                                 color_discrete_map={
+                                     'Estancia Corta (<3 dias)': '#4e6c9f', 
+                                     'Estancia Media (3 a 7 dias)': '#b6b5af', 
+                                     'Estancia Prolongada (>7 dias)': '#253d5b'
+                                 })
+                fig_pie.update_traces(textposition='inside', textinfo='percent+label')
+                fig_pie.update_layout(margin=dict(t=40, b=0, l=0, r=0))
+                st.plotly_chart(fig_pie, use_container_width=True)
+                
+            with col_chart2:
+                # Gráfico de Barras: Pacientes con Alerta por Pabellón
+                if 'PabellonIngreso' in df_censo.columns:
+                    desviados_df = df_censo[df_censo['Estado_Auditoria'].str.contains("Desviado")]
+                    pabellon_counts = desviados_df['PabellonIngreso'].value_counts().reset_index()
+                    pabellon_counts.columns = ['Pabellón', 'Pacientes Desviados']
+                    
+                    fig_bar = px.bar(pabellon_counts, x='Pabellón', y='Pacientes Desviados',
+                                     title='Alarmas de Desviación por Pabellón',
+                                     color_discrete_sequence=['#253d5b'])
+                    
+                    fig_bar.update_layout(xaxis_tickangle=-45, margin=dict(t=40, b=0, l=0, r=0))
+                    st.plotly_chart(fig_bar, use_container_width=True)
+                else:
+                    st.info("El gráfico de Pabellones requiere la columna 'PabellonIngreso'.")
+
+            st.markdown("---")
+            st.markdown("### 📋 Detalle Nominal de Auditoría")
             columnas_mostrar = ['edad', 'Dx_Agrupado', 'FechaIngreso', 'Dias_Actuales', 'Prediccion_Estancia', 'Estado_Auditoria']
             columnas_disponibles = [c for c in columnas_mostrar if c in df_censo.columns]
             
-            st.dataframe(df_censo[columnas_disponibles], use_container_width=True)
+            # Resaltar en rojo los pacientes desviados usando pandas styling
+            def resaltar_desviados(row):
+                if 'Desviado' in str(row.get('Estado_Auditoria', '')):
+                    return ['background-color: #ffdce0'] * len(row)
+                return [''] * len(row)
+                
+            st.dataframe(df_censo[columnas_disponibles].style.apply(resaltar_desviados, axis=1), use_container_width=True)
             
             csv_exp = df_censo.to_csv(index=False).encode('utf-8')
             st.download_button(
                 label="Descargar Censo con Predicciones y Alertas",
                 data=csv_exp,
-                file_name='Censo_Predictivo.csv',
+                file_name='Censo_Predictivo_V3.csv',
                 mime='text/csv',
             )
             
