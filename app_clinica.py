@@ -312,14 +312,17 @@ if selected == "Auditoría Masiva":
                 mascara_vacios = df_censo['PabellonIngreso'].isna() | (df_censo['PabellonIngreso'] == '')
                 df_censo.loc[mascara_vacios, 'PabellonIngreso'] = df_censo.loc[mascara_vacios, 'CAMA'].apply(clasificar_pabellon)
             
-            if 'edad' not in df_censo.columns:
-                if 'FechaNacimiento' in df_censo.columns:
-                    df_censo['FechaNacimiento'] = pd.to_datetime(df_censo['FechaNacimiento'], errors='coerce')
-                    df_censo['edad'] = (pd.Timestamp.now() - df_censo['FechaNacimiento']).dt.total_seconds() / (3600 * 24 * 365.25)
-                    df_censo['edad'] = df_censo['edad'].fillna(50)
-                else:
-                    df_censo['edad'] = 50
-                    st.toast("⚠️ El censo no contenía la edad de los pacientes. El sistema asumió 50 años como promedio preventivo.", icon="⚠️")
+            if 'edad' in df_censo.columns:
+                # Extraer solo los números de campos como "57 A"
+                df_censo['edad'] = df_censo['edad'].astype(str).str.replace(r'\D', '', regex=True)
+                df_censo['edad'] = pd.to_numeric(df_censo['edad'], errors='coerce').fillna(50)
+            elif 'FechaNacimiento' in df_censo.columns:
+                df_censo['FechaNacimiento'] = pd.to_datetime(df_censo['FechaNacimiento'], errors='coerce')
+                df_censo['edad'] = (pd.Timestamp.now() - df_censo['FechaNacimiento']).dt.total_seconds() / (3600 * 24 * 365.25)
+                df_censo['edad'] = df_censo['edad'].fillna(50)
+            else:
+                df_censo['edad'] = 50
+                st.toast("⚠️ El censo no contenía la edad de los pacientes. El sistema asumió 50 años como promedio preventivo.", icon="⚠️")
                     
             if 'Sexo' not in df_censo.columns:
                 df_censo['Sexo'] = 'M'
@@ -397,7 +400,7 @@ if selected == "Auditoría Masiva":
                     if dias_actuales > dias_pred:
                         alertas.append("Desviado - Límite Superado")
                     else:
-                        alertas.append("Conforme - Estancia Normal")
+                        alertas.append("Normal - Dentro del límite estimado")
                     
                     # Formatear la salida para la tabla como número exacto
                     df_censo.at[index, 'Prediccion_Estancia'] = f"{dias_pred:.1f} días"
@@ -411,7 +414,7 @@ if selected == "Auditoría Masiva":
                     elif "Media" in str(row['Prediccion_Estancia']) and row.get('Dias_Actuales', 0) > 7:
                         alertas.append("Desviado - Límite Superado")
                     else:
-                        alertas.append("Conforme - Estancia Normal")
+                        alertas.append("Normal - Dentro del límite estimado")
                     
             df_censo['Estado_Auditoria'] = alertas
             
@@ -484,7 +487,7 @@ if selected == "Auditoría Masiva":
                                       title=f'{str(pab)[:20]} ({len(df_pab)})',
                                       color='Estado',
                                       color_discrete_map={
-                                          'Conforme - Estancia Normal': '#b6b5af', 
+                                          'Normal - Dentro del límite estimado': '#b6b5af', 
                                           'Desviado - Límite Superado': '#253d5b'
                                       })
                     fig_mini.update_traces(textinfo='value')
