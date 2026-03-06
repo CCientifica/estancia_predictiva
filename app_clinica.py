@@ -250,13 +250,55 @@ if selected == "Auditoría Masiva":
             st.info(f"Se cargaron {len(df_censo)} pacientes del censo.")
             
             # --- ESTANDARIZACIÓN DE MÚLTIPLES ESTRUCTURAS DE CENSO ---
+            # Limpiar espacios ocultos en los nombres de las columnas Ej: 'EDAD '
+            df_censo.columns = [str(c).strip() for c in df_censo.columns]
+            
             mapeo_columnas = {
                 'FecIngreso': 'FechaIngreso',
+                'FECHA INGRESO': 'FechaIngreso',
                 'PabIngreso': 'PabellonIngreso',
                 'EspecTratante': 'Esp',
-                'Dx1': 'Dx'
+                'ESPECIALIDAD TRATANTE': 'Esp',
+                'Dx1': 'Dx',
+                'COD. DIAG.': 'Dx',
+                'EDAD': 'edad'
             }
             df_censo = df_censo.rename(columns=mapeo_columnas)
+            
+            # Mapeo Inteligente de Camas (Pabellones / Servicios)
+            def clasificar_pabellon(cama):
+                if pd.isna(cama): return "DESCONOCIDO"
+                cama = str(cama).strip().upper()
+                
+                # Reglas Hemo-Oncología (Piso 2)
+                if cama in [str(i) for i in range(201, 223)]: 
+                    return "SEGUNDO PISO (HEMATO-ONCOLOGIA)"
+                
+                # Reglas Piso 3
+                tercer_piso = [str(i) for i in range(306, 323)] + ["301PA", "301PB", "302P", "303P", "304P", "305P", "323P", "324P", "325P", "326P"]
+                if cama in tercer_piso: return "TERCER PISO"
+                
+                # Reglas Piso 4
+                cuarto_piso = [str(i) for i in range(401, 416)] + ["416A", "416B", "417A", "417B", "418A", "418B", "419A", "419B", "420A", "420B", "421", "422", "423A", "423B", "424A", "424B", "425A", "425B", "426"]
+                if cama in cuarto_piso: return "CUARTO PISO"
+                
+                # Reglas Cuidado Crítico
+                if cama.startswith("UCI") or cama.startswith("UCE"): 
+                    return "CUIDADO CRITICO"
+                    
+                # Reglas Urgencias
+                if cama.startswith(("AU", "PAS", "PED", "REA", "SI", "YES", "H2")): 
+                    return "URGENCIAS"
+                    
+                return "DESCONOCIDO"
+            
+            # Asignar Pabellón a partir de la Cama si el formato no trajo PabellonIngreso explícito
+            if 'PabellonIngreso' not in df_censo.columns and 'CAMA' in df_censo.columns:
+                df_censo['PabellonIngreso'] = df_censo['CAMA'].apply(clasificar_pabellon)
+            elif 'PabellonIngreso' in df_censo.columns and 'CAMA' in df_censo.columns:
+                # Rellena espacios nulos del pabellon usando la cama
+                mascara_vacios = df_censo['PabellonIngreso'].isna() | (df_censo['PabellonIngreso'] == '')
+                df_censo.loc[mascara_vacios, 'PabellonIngreso'] = df_censo.loc[mascara_vacios, 'CAMA'].apply(clasificar_pabellon)
             
             if 'edad' not in df_censo.columns:
                 if 'FechaNacimiento' in df_censo.columns:
