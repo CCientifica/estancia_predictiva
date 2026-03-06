@@ -249,6 +249,28 @@ if selected == "Auditoría Masiva":
             
             st.info(f"Se cargaron {len(df_censo)} pacientes del censo.")
             
+            # --- ESTANDARIZACIÓN DE MÚLTIPLES ESTRUCTURAS DE CENSO ---
+            mapeo_columnas = {
+                'FecIngreso': 'FechaIngreso',
+                'PabIngreso': 'PabellonIngreso',
+                'EspecTratante': 'Esp',
+                'Dx1': 'Dx'
+            }
+            df_censo = df_censo.rename(columns=mapeo_columnas)
+            
+            if 'edad' not in df_censo.columns:
+                if 'FechaNacimiento' in df_censo.columns:
+                    df_censo['FechaNacimiento'] = pd.to_datetime(df_censo['FechaNacimiento'], errors='coerce')
+                    df_censo['edad'] = (pd.Timestamp.now() - df_censo['FechaNacimiento']).dt.total_seconds() / (3600 * 24 * 365.25)
+                    df_censo['edad'] = df_censo['edad'].fillna(50)
+                else:
+                    df_censo['edad'] = 50
+                    st.toast("⚠️ El censo no contenía la edad de los pacientes. El sistema asumió 50 años como promedio preventivo.", icon="⚠️")
+                    
+            if 'Sexo' not in df_censo.columns:
+                df_censo['Sexo'] = 'M'
+            # -------------------------------------------------------------
+            
             # Formato V2 / V3 / V4
             if version_modelo in ["V2", "V3", "V4"]:
                 if 'Dx2Nombre' in df_censo.columns and 'Dx3Nombre' in df_censo.columns:
