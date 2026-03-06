@@ -257,7 +257,8 @@ if selected == "Auditoría Masiva":
                 c_clean = str(col).strip().upper()
                 if c_clean == 'EDAD': columnas_nuevas.append('edad')
                 elif c_clean in ['FECINGRESO', 'FECHA INGRESO', 'FECHA INGRESO']: columnas_nuevas.append('FechaIngreso')
-                elif c_clean in ['PABINGRESO', 'PABELLON DE INGRESO']: columnas_nuevas.append('PabellonIngreso')
+                elif c_clean in ['PABACTUAL', 'PABELLON ACTUAL', 'PABELLONACTUAL']: columnas_nuevas.append('PabellonIngreso_Primario')
+                elif c_clean in ['PABINGRESO', 'PABELLON DE INGRESO', 'PABELLONINGRESO']: columnas_nuevas.append('PabellonIngreso_Secundario')
                 elif c_clean in ['ESPECTRATANTE', 'ESPECIALIDAD TRATANTE']: columnas_nuevas.append('Esp')
                 elif c_clean in ['DX1', 'COD. DIAG.', 'COD. DIAG']: columnas_nuevas.append('Dx')
                 elif c_clean == 'CAMA': columnas_nuevas.append('CAMA')
@@ -270,6 +271,12 @@ if selected == "Auditoría Masiva":
                 
             df_censo.columns = columnas_nuevas
             
+            # Consolidar el Pabellón de prioridad (PabActual gana)
+            if 'PabellonIngreso_Primario' in df_censo.columns:
+                df_censo['PabellonIngreso'] = df_censo['PabellonIngreso_Primario']
+            elif 'PabellonIngreso_Secundario' in df_censo.columns:
+                df_censo['PabellonIngreso'] = df_censo['PabellonIngreso_Secundario']
+                
             # Mapeo Inteligente de Camas (Pabellones / Servicios)
             def clasificar_pabellon(cama):
                 if pd.isna(cama): return "DESCONOCIDO"
@@ -459,11 +466,39 @@ if selected == "Auditoría Masiva":
                     fig_bar.update_layout(xaxis_tickangle=-45, margin=dict(t=40, b=0, l=0, r=0))
                     st.plotly_chart(fig_bar, use_container_width=True)
                 else:
-                    st.info("El gráfico de Pabellones requiere la columna 'PabellonIngreso'.")
+                    st.info("El gráfico de Pabellones requiere la columna 'PabellonIngreso' o 'PabActual'.")
+
+            # Mini Gráficos por Categoría / Servicio Individual
+            st.markdown("---")
+            st.markdown("### 🏥 Radiografía por Servicio Individual (Pabellón Actual)")
+            
+            if 'PabellonIngreso' in df_censo.columns:
+                pabellones = [p for p in df_censo['PabellonIngreso'].unique() if pd.notna(p) and str(p).strip() != ""]
+                cols_pab = st.columns(3)
+                
+                for i, pab in enumerate(pabellones):
+                    df_pab = df_censo[df_censo['PabellonIngreso'] == pab]
+                    if len(df_pab) == 0: continue
+                    
+                    estado_counts = df_pab['Estado_Auditoria'].value_counts().reset_index()
+                    estado_counts.columns = ['Estado', 'Cant']
+                    
+                    fig_mini = px.pie(estado_counts, values='Cant', names='Estado', hole=0.5,
+                                      title=f'{str(pab)[:20]} ({len(df_pab)})',
+                                      color='Estado',
+                                      color_discrete_map={
+                                          'En progreso': '#b6b5af', 
+                                          'Desviado - Límite Superado': '#253d5b'
+                                      })
+                    fig_mini.update_traces(textinfo='value')
+                    fig_mini.update_layout(showlegend=False, margin=dict(t=30, b=10, l=10, r=10), height=200, title_x=0.5, title_font_size=13)
+                    
+                    with cols_pab[i % 3]:
+                        st.plotly_chart(fig_mini, use_container_width=True)
 
             st.markdown("---")
             st.markdown("### 📋 Detalle Nominal de Auditoría")
-            columnas_mostrar = ['Identificacion', 'Paciente_Nombre', 'Paciente_Apellido', 'CAMA', 'edad', 'Dx_Agrupado', 'FechaIngreso', 'Dias_Actuales', 'Prediccion_Estancia', 'Estado_Auditoria']
+            columnas_mostrar = ['Identificacion', 'Paciente_Nombre', 'Paciente_Apellido', 'CAMA', 'edad', 'PabellonIngreso', 'Dx_Agrupado', 'FechaIngreso', 'Dias_Actuales', 'Prediccion_Estancia', 'Estado_Auditoria']
             columnas_disponibles = [c for c in columnas_mostrar if c in df_censo.columns]
             
             df_mostrar = df_censo[columnas_disponibles]
