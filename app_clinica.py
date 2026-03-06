@@ -263,6 +263,9 @@ if selected == "Auditoría Masiva":
                 elif c_clean == 'CAMA': columnas_nuevas.append('CAMA')
                 elif c_clean == 'SEXO': columnas_nuevas.append('Sexo')
                 elif c_clean in ['FECHANACIMIENTO', 'FECHA DE NACIMIENTO']: columnas_nuevas.append('FechaNacimiento')
+                elif c_clean in ['IDENTIFICACION', 'NUM DOC', 'TFCEDU', 'NOINGRESO']: columnas_nuevas.append('Identificacion')
+                elif c_clean in ['PACIENTE', 'NOMBRE1', 'NOMBRES']: columnas_nuevas.append('Paciente_Nombre')
+                elif c_clean in ['APELLIDO1', 'APELLIDOS']: columnas_nuevas.append('Paciente_Apellido')
                 else: columnas_nuevas.append(str(col).strip()) # Mantiene el original limpio
                 
             df_censo.columns = columnas_nuevas
@@ -460,7 +463,7 @@ if selected == "Auditoría Masiva":
 
             st.markdown("---")
             st.markdown("### 📋 Detalle Nominal de Auditoría")
-            columnas_mostrar = ['edad', 'Dx_Agrupado', 'FechaIngreso', 'Dias_Actuales', 'Prediccion_Estancia', 'Estado_Auditoria']
+            columnas_mostrar = ['Identificacion', 'Paciente_Nombre', 'Paciente_Apellido', 'CAMA', 'edad', 'Dx_Agrupado', 'FechaIngreso', 'Dias_Actuales', 'Prediccion_Estancia', 'Estado_Auditoria']
             columnas_disponibles = [c for c in columnas_mostrar if c in df_censo.columns]
             
             df_mostrar = df_censo[columnas_disponibles]
