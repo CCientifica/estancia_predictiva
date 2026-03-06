@@ -4,3 +4,4 @@ scikit-learn
 joblib
 plotly
 numpy
+streamlit-option-menu
