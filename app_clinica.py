@@ -234,7 +234,7 @@ if selected == "Auditoría Masiva":
     st.subheader("Proyección del Censo Actual")
     st.write("Sube el archivo Excel o CSV del censo matutino para predecir las estancias detectando pacientes desviados.")
     
-    archivo_subido = st.file_uploader("Cargar Censo en formato CSV o Excel", type=["csv", "xlsx"])
+    archivo_subido = st.file_uploader("Cargar Censo en formato CSV o Excel", type=["csv", "xlsx", "xls"])
     
     if archivo_subido is not None:
         try:
