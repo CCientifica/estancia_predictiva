@@ -215,11 +215,11 @@ if selected == "Paciente Individual":
             max_dias = int(dias_estimados) + 2 if dias_estimados % 1 > 0 else int(dias_estimados) + 1
             
             if dias_estimados > 7:
-                st.error(f"🚨 **ALERTA - Riesgo de Ocupación Prolongada.**\n\n📍 Estancia estimada: Entre **{min_dias} y {max_dias} días**. (Proyección Exacta: {dias_estimados:.1f} días)")
+                st.error(f"🚨 **ALERTA - Riesgo de Ocupación Prolongada.**\n\n📍 Estancia estimada: **{dias_estimados:.1f} días**.")
             elif dias_estimados > 3:
-                st.warning(f"🟡 **PRECAUCIÓN - Monitoreo estándar requerido.**\n\n📍 Estancia estimada: Entre **{min_dias} y {max_dias} días**. (Proyección Exacta: {dias_estimados:.1f} días)")
+                st.warning(f"🟡 **PRECAUCIÓN - Monitoreo estándar requerido.**\n\n📍 Estancia estimada: **{dias_estimados:.1f} días**.")
             else:
-                st.success(f"🟢 **ÓPTIMO - Flujo rápido esperado.**\n\n📍 Estancia estimada: Entre **{min_dias} y {max_dias} días**. (Proyección Exacta: {dias_estimados:.1f} días)")
+                st.success(f"🟢 **ÓPTIMO - Flujo rápido esperado.**\n\n📍 Estancia estimada: **{dias_estimados:.1f} días**.")
         else:
             if "Corta" in prediccion:
                 st.success(f"{prediccion} - Flujo rápido esperado. Planear alta temprana.")
@@ -393,17 +393,14 @@ if selected == "Auditoría Masiva":
                     if dias_pred > 7:
                         riesgo_prolongado += 1
                         
-                    if dias_pred < 7 and dias_actuales > 7:
-                        alertas.append("Desviado - Límite Superado")
-                    elif dias_pred < 3 and dias_actuales > 3:
+                    # La lógica real de desviación: si ya lleva más días de los que la IA predijo
+                    if dias_actuales > dias_pred:
                         alertas.append("Desviado - Límite Superado")
                     else:
-                        alertas.append("En progreso")
+                        alertas.append("Conforme - Estancia Normal")
                     
-                    # Formatear amigablemente la salida para la tabla V4
-                    min_d = max(1, int(dias_pred))
-                    max_d = int(dias_pred) + 2 if dias_pred % 1 > 0 else int(dias_pred) + 1
-                    df_censo.at[index, 'Prediccion_Estancia'] = f"Entre {min_d} y {max_d} días"
+                    # Formatear la salida para la tabla como número exacto
+                    df_censo.at[index, 'Prediccion_Estancia'] = f"{dias_pred:.1f} días"
 
                 else:
                     if "Prolongada" in str(row['Prediccion_Estancia']):
@@ -414,7 +411,7 @@ if selected == "Auditoría Masiva":
                     elif "Media" in str(row['Prediccion_Estancia']) and row.get('Dias_Actuales', 0) > 7:
                         alertas.append("Desviado - Límite Superado")
                     else:
-                        alertas.append("En progreso")
+                        alertas.append("Conforme - Estancia Normal")
                     
             df_censo['Estado_Auditoria'] = alertas
             
@@ -487,7 +484,7 @@ if selected == "Auditoría Masiva":
                                       title=f'{str(pab)[:20]} ({len(df_pab)})',
                                       color='Estado',
                                       color_discrete_map={
-                                          'En progreso': '#b6b5af', 
+                                          'Conforme - Estancia Normal': '#b6b5af', 
                                           'Desviado - Límite Superado': '#253d5b'
                                       })
                     fig_mini.update_traces(textinfo='value')
