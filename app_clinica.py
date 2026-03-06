@@ -287,5 +287,4 @@ with tab_masivo:
             )
             
         except Exception as e:
-            st.error(f"Error procesando el archivo: {e}")}")
-
+            st.error(f"Error procesando el archivo: {e}")
