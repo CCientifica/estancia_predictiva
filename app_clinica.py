@@ -4,6 +4,7 @@ import joblib
 from datetime import datetime
 import os
 import plotly.express as px
+from streamlit_option_menu import option_menu
 
 # 1. CONFIGURACIÓN DE PÁGINA Y DISEÑO
 try:
@@ -94,7 +95,9 @@ st.markdown("""
 # 2. CARGA DEL CEREBRO MATEMÁTICO
 @st.cache_resource
 def cargar_modelo():
-    if os.path.exists('modelo_estancia_v3.pkl') and os.path.exists('columnas_modelo_v3.pkl'):
+    if os.path.exists('modelo_estancia_v4.pkl') and os.path.exists('columnas_modelo_v4.pkl'):
+        return joblib.load('modelo_estancia_v4.pkl'), joblib.load('columnas_modelo_v4.pkl'), "V4"
+    elif os.path.exists('modelo_estancia_v3.pkl') and os.path.exists('columnas_modelo_v3.pkl'):
         return joblib.load('modelo_estancia_v3.pkl'), joblib.load('columnas_modelo_v3.pkl'), "V3"
     elif os.path.exists('modelo_estancia_v2.pkl') and os.path.exists('columnas_modelo_v2.pkl'):
         return joblib.load('modelo_estancia_v2.pkl'), joblib.load('columnas_modelo_v2.pkl'), "V2"
@@ -119,20 +122,35 @@ with col_logo:
 with col_tit:
     st.title("Sistema de Alerta Temprana y Gestión de Camas")
     st.markdown("Plataforma analítica para la predicción de estancia hospitalaria (Length of Stay).")
-    if version_modelo == "V3":
+    if version_modelo == "V4":
+        st.caption("Motor Predictivo: Versión 4.0 (Regresor Numérico Exacto en Días)")
+    elif version_modelo == "V3":
         st.caption("Motor Predictivo: Versión 3.0 (Alta Resolución con Minería Clínica)")
     elif version_modelo == "V2":
         st.caption("Motor Predictivo: Versión 2.0 (Alta Precisión Clínica)")
 
 st.markdown("---")
 
-# 4. CREACIÓN DE PESTAÑAS
-tab_individual, tab_masivo = st.tabs(["Paciente Individual", "Auditoría Masiva (Censo Diurno)"])
+# 4. CREACIÓN DE NAVEGACIÓN (ESTILO BOOTSTRAP / NATIVA)
+selected = option_menu(
+    menu_title=None,
+    options=["Paciente Individual", "Auditoría Masiva"],
+    icons=["person-bounding-box", "bar-chart-fill"],
+    menu_icon="cast",
+    default_index=0,
+    orientation="horizontal",
+    styles={
+        "container": {"padding": "0!important", "background-color": "#f8f9fa", "border-top": "2px solid #b6b5af", "border-bottom": "2px solid #b6b5af"},
+        "icon": {"color": "#4e6c9f", "font-size": "18px"}, 
+        "nav-link": {"font-size": "16px", "text-align": "center", "margin":"0px", "--hover-color": "#e0e0e0", "font-family": "Poppins", "font-weight": "600", "color": "#4e6c9f"},
+        "nav-link-selected": {"background-color": "#253d5b", "color": "white"},
+    }
+)
 
 # ==========================================
 # PESTAÑA 1: PREDICCIÓN INDIVIDUAL
 # ==========================================
-with tab_individual:
+if selected == "Paciente Individual":
     st.subheader("Ingreso de Paciente a Urgencias / Piso")
     
     col1, col2, col3 = st.columns(3)
@@ -170,7 +188,7 @@ with tab_individual:
     if st.button("Calcular Riesgo de Estancia", key="btn_indiv"):
         total_comorbilidades = sum([diabetes, hipertension, cardiaca, epoc, hemato_onco, quimio, hemofilia, porfiria, renal, vih])
         
-        if version_modelo in ["V2", "V3"]:
+        if version_modelo in ["V2", "V3", "V4"]:
             datos = pd.DataFrame({
                 'edad': [edad], 'Sexo': [sexo], 'PabellonIngreso': [pabellon], 'Esp': [esp], 'Dx_Agrupado': [dx],
                 'Diabetes': [int(diabetes)], 'Hipertension': [int(hipertension)], 'Cardiaca': [int(cardiaca)], 
@@ -189,17 +207,30 @@ with tab_individual:
         
         st.markdown("---")
         st.subheader("Resultado Clínico:")
-        if "Corta" in prediccion:
-            st.success(f"{prediccion} - Flujo rápido esperado. Planear alta temprana.")
-        elif "Media" in prediccion:
-            st.warning(f"{prediccion} - Monitoreo estándar requerido.")
+        
+        if version_modelo == "V4":
+            dias_estimados = float(prediccion)
+            min_dias = max(1, int(dias_estimados))
+            max_dias = int(dias_estimados) + 2 if dias_estimados % 1 > 0 else int(dias_estimados) + 1
+            
+            if dias_estimados > 7:
+                st.error(f"🚨 **ALERTA - Riesgo de Ocupación Prolongada.**\n\n📍 Estancia estimada: Entre **{min_dias} y {max_dias} días**. (Proyección Exacta: {dias_estimados:.1f} días)")
+            elif dias_estimados > 3:
+                st.warning(f"🟡 **PRECAUCIÓN - Monitoreo estándar requerido.**\n\n📍 Estancia estimada: Entre **{min_dias} y {max_dias} días**. (Proyección Exacta: {dias_estimados:.1f} días)")
+            else:
+                st.success(f"🟢 **ÓPTIMO - Flujo rápido esperado.**\n\n📍 Estancia estimada: Entre **{min_dias} y {max_dias} días**. (Proyección Exacta: {dias_estimados:.1f} días)")
         else:
-            st.error(f"{prediccion} - ALERTA: Alto riesgo de ocupación prolongada. Requiere revisión de caso.")
+            if "Corta" in prediccion:
+                st.success(f"{prediccion} - Flujo rápido esperado. Planear alta temprana.")
+            elif "Media" in prediccion:
+                st.warning(f"{prediccion} - Monitoreo estándar requerido.")
+            else:
+                st.error(f"{prediccion} - ALERTA: Alto riesgo de ocupación prolongada. Requiere revisión de caso.")
 
 # ==========================================
 # PESTAÑA 2: CARGA MASIVA (CENSO)
 # ==========================================
-with tab_masivo:
+if selected == "Auditoría Masiva":
     st.subheader("Proyección del Censo Actual")
     st.write("Sube el archivo Excel o CSV del censo matutino para predecir las estancias detectando pacientes desviados.")
     
@@ -218,8 +249,8 @@ with tab_masivo:
             
             st.info(f"Se cargaron {len(df_censo)} pacientes del censo.")
             
-            # Formato V2 / V3
-            if version_modelo in ["V2", "V3"]:
+            # Formato V2 / V3 / V4
+            if version_modelo in ["V2", "V3", "V4"]:
                 if 'Dx2Nombre' in df_censo.columns and 'Dx3Nombre' in df_censo.columns:
                     df_censo['Texto_Dx'] = df_censo['Dx2Nombre'].fillna('').str.upper() + " " + df_censo['Dx3Nombre'].fillna('').str.upper()
                 else:
@@ -240,8 +271,8 @@ with tab_masivo:
                 df_censo['Total_Comorbilidades'] = df_censo[cols_enfermedades].sum(axis=1)
                 
                 if 'Dx' in df_censo.columns:
-                    # Permitir 4 dígitos para V3, 3 para V2 (mantener compatibilidad)
-                    digits = 4 if version_modelo == "V3" else 3
+                    # Permitir 4 dígitos para V3/V4, 3 para V2 (mantener compatibilidad)
+                    digits = 4 if version_modelo in ["V3", "V4"] else 3
                     df_censo['Dx_Agrupado'] = df_censo['Dx'].astype(str).str[:digits]
                 else:
                     df_censo['Dx_Agrupado'] = "DESCONOCIDO"
@@ -274,15 +305,40 @@ with tab_masivo:
             else:
                 df_censo['Dias_Actuales'] = 0
             
-            # Alertas sin emojis
+            # Alertas dinámicas
             alertas = []
+            riesgo_prolongado = 0
+            
             for index, row in df_censo.iterrows():
-                if "Corta" in str(row['Prediccion_Estancia']) and row.get('Dias_Actuales', 0) > 3:
-                    alertas.append("Desviado - Límite Superado")
-                elif "Media" in str(row['Prediccion_Estancia']) and row.get('Dias_Actuales', 0) > 7:
-                    alertas.append("Desviado - Límite Superado")
+                if version_modelo == "V4":
+                    dias_pred = float(row['Prediccion_Estancia'])
+                    dias_actuales = row.get('Dias_Actuales', 0)
+                    
+                    if dias_pred > 7:
+                        riesgo_prolongado += 1
+                        
+                    if dias_pred < 7 and dias_actuales > 7:
+                        alertas.append("Desviado - Límite Superado")
+                    elif dias_pred < 3 and dias_actuales > 3:
+                        alertas.append("Desviado - Límite Superado")
+                    else:
+                        alertas.append("En progreso")
+                    
+                    # Formatear amigablemente la salida para la tabla V4
+                    min_d = max(1, int(dias_pred))
+                    max_d = int(dias_pred) + 2 if dias_pred % 1 > 0 else int(dias_pred) + 1
+                    df_censo.at[index, 'Prediccion_Estancia'] = f"Entre {min_d} y {max_d} días"
+
                 else:
-                    alertas.append("En progreso")
+                    if "Prolongada" in str(row['Prediccion_Estancia']):
+                        riesgo_prolongado += 1
+                        
+                    if "Corta" in str(row['Prediccion_Estancia']) and row.get('Dias_Actuales', 0) > 3:
+                        alertas.append("Desviado - Límite Superado")
+                    elif "Media" in str(row['Prediccion_Estancia']) and row.get('Dias_Actuales', 0) > 7:
+                        alertas.append("Desviado - Límite Superado")
+                    else:
+                        alertas.append("En progreso")
                     
             df_censo['Estado_Auditoria'] = alertas
             
@@ -292,7 +348,6 @@ with tab_masivo:
             # Métricas Superiores
             total_pacientes = len(df_censo)
             desviados = sum(1 for a in alertas if "Desviado" in a)
-            riesgo_prolongado = sum(1 for p in df_censo['Prediccion_Estancia'] if "Prolongada" in str(p))
             
             # Usando columnas para los KPI
             kpi1, kpi2, kpi3 = st.columns(3)
