@@ -388,22 +388,30 @@ if selected == "Auditoría Masiva":
             alertas = []
             riesgo_prolongado = 0
             
-            for index, row in df_censo.iterrows():
-                if version_modelo == "V4":
-                    dias_pred = float(row['Prediccion_Estancia'])
-                    dias_actuales = row.get('Dias_Actuales', 0)
-                    
-                    if dias_pred > 7:
-                        riesgo_prolongado += 1
-                        
-                    # La lógica real de desviación: si ya lleva más días de los que la IA predijo
-                    if dias_actuales > dias_pred:
-                        alertas.append("Desviado - Límite Superado")
-                    else:
-                        alertas.append("Normal - Dentro del límite estimado")
-                    
-                    # Formatear la salida para la tabla como número exacto
-                    df_censo.at[index, 'Prediccion_Estancia'] = f"{dias_pred:.1f} días"
+df_censo['Prediccion_Estancia_Texto'] = ""
+df_censo['Categoria_Estancia'] = ""
+
+for index, row in df_censo.iterrows():
+    if version_modelo == "V4":
+        dias_pred = float(row['Prediccion_Estancia'])
+        dias_actuales = row.get('Dias_Actuales', 0)
+
+        if dias_pred > 7:
+            riesgo_prolongado += 1
+
+        if dias_actuales > dias_pred:
+            alertas.append("Desviado - Límite Superado")
+        else:
+            alertas.append("Normal - Dentro del límite estimado")
+
+        df_censo.at[index, 'Prediccion_Estancia_Texto'] = f"{dias_pred:.1f} días"
+
+        if dias_pred < 3:
+            df_censo.at[index, 'Categoria_Estancia'] = 'Estancia Corta (<3 días)'
+        elif dias_pred <= 7:
+            df_censo.at[index, 'Categoria_Estancia'] = 'Estancia Media (3 a 7 días)'
+        else:
+            df_censo.at[index, 'Categoria_Estancia'] = 'Estancia Prolongada (>7 días)'
 
                 else:
                     if "Prolongada" in str(row['Prediccion_Estancia']):
