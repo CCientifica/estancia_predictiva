@@ -8,9 +8,7 @@ from streamlit_option_menu import option_menu
 from openpyxl.utils import get_column_letter
 from openpyxl.styles import PatternFill, Font
 
-# =========================================================
 # 1. CONFIGURACIÓN DE PÁGINA Y DISEÑO
-# =========================================================
 try:
     if os.path.exists("Logo_Clinica.png"):
         st.set_page_config(
@@ -72,6 +70,31 @@ st.markdown("""
         box-shadow: 0 4px 8px rgba(0,0,0,0.15);
     }
 
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 10px;
+        border-bottom: 2px solid #b6b5af;
+    }
+
+    .stTabs [data-baseweb="tab"] {
+        background-color: transparent;
+        border: 2px solid transparent;
+        border-radius: 5px 5px 0px 0px;
+        color: #4e6c9f;
+        padding: 10px 20px;
+        font-weight: 600;
+        font-family: 'Poppins', sans-serif;
+    }
+
+    .stTabs [aria-selected="true"] {
+        background-color: white;
+        color: #253d5b;
+        border-top: 2px solid #253d5b;
+        border-left: 2px solid #b6b5af;
+        border-right: 2px solid #b6b5af;
+        border-bottom: 2px solid white;
+        margin-bottom: -2px;
+    }
+
     div[data-testid="metric-container"] {
         background-color: white;
         border: 1px solid #b6b5af;
@@ -82,9 +105,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# =========================================================
-# 2. CARGA DEL MODELO
-# =========================================================
+# 2. CARGA DEL CEREBRO MATEMÁTICO
 @st.cache_resource
 def cargar_modelo():
     if os.path.exists('modelo_estancia_v4.pkl') and os.path.exists('columnas_modelo_v4.pkl'):
@@ -102,18 +123,11 @@ except Exception as e:
     st.error(f"Error cargando el modelo: {e}")
     st.stop()
 
-# =========================================================
 # 3. FUNCIONES AUXILIARES
-# =========================================================
-def normalizar_texto(valor):
-    if pd.isna(valor):
-        return ""
-    return str(valor).strip().upper()
-
 def leer_archivo_subido(archivo_subido):
     nombre = archivo_subido.name.lower()
 
-    if nombre.endswith(".csv"):
+    if nombre.endswith('.csv'):
         try:
             return pd.read_csv(archivo_subido, sep=';', encoding='latin1')
         except Exception:
@@ -125,37 +139,37 @@ def estandarizar_columnas(df):
     columnas_nuevas = []
 
     for col in df.columns:
-        c = str(col).strip().upper()
+        c_clean = str(col).strip().upper()
 
-        if c == 'EDAD':
+        if c_clean == 'EDAD':
             columnas_nuevas.append('edad')
-        elif c in ['FECINGRESO', 'FECHA INGRESO', 'FECHA_DE_INGRESO', 'FECHAINGRESO']:
+        elif c_clean in ['FECINGRESO', 'FECHA INGRESO', 'FECHAINGRESO', 'FECHA_DE_INGRESO']:
             columnas_nuevas.append('FechaIngreso')
-        elif c in ['PABACTUAL', 'PABELLON ACTUAL', 'PABELLONACTUAL', 'SERVICIO ACTUAL', 'UBICACION ACTUAL']:
-            columnas_nuevas.append('PabellonActual')
-        elif c in ['PABINGRESO', 'PABELLON DE INGRESO', 'PABELLONINGRESO', 'SERVICIO INGRESO', 'UBICACION INGRESO']:
-            columnas_nuevas.append('PabellonIngresoOriginal')
-        elif c in ['ESPECTRATANTE', 'ESPECIALIDAD TRATANTE', 'ESP', 'ESPECIALIDAD']:
+        elif c_clean in ['PABACTUAL', 'PABELLON ACTUAL', 'PABELLONACTUAL']:
+            columnas_nuevas.append('PabellonIngreso_Primario')
+        elif c_clean in ['PABINGRESO', 'PABELLON DE INGRESO', 'PABELLONINGRESO']:
+            columnas_nuevas.append('PabellonIngreso_Secundario')
+        elif c_clean in ['ESPECTRATANTE', 'ESPECIALIDAD TRATANTE', 'ESP', 'ESPECIALIDAD']:
             columnas_nuevas.append('Esp')
-        elif c in ['DX1', 'COD. DIAG.', 'COD. DIAG', 'DX', 'CODIGO DIAGNOSTICO', 'COD DIAG']:
+        elif c_clean in ['DX1', 'COD. DIAG.', 'COD. DIAG', 'DX', 'CODIGO DIAGNOSTICO', 'COD DIAG']:
             columnas_nuevas.append('Dx')
-        elif c in ['DIAGNOSTICO', 'DX1NOMBRE', 'DX1 NOMBRE', 'DESCRIPCION DIAGNOSTICO', 'NOMBRE DIAGNOSTICO']:
+        elif c_clean in ['DIAGNOSTICO', 'DX1NOMBRE', 'DX1 NOMBRE', 'NOMBRE DIAGNOSTICO', 'DESCRIPCION DIAGNOSTICO']:
             columnas_nuevas.append('DxNombrePrincipal')
-        elif c in ['DX2NOMBRE', 'DX2 NOMBRE', 'DIAGNOSTICO 2']:
+        elif c_clean in ['DX2NOMBRE', 'DX2 NOMBRE', 'DIAGNOSTICO 2']:
             columnas_nuevas.append('Dx2Nombre')
-        elif c in ['DX3NOMBRE', 'DX3 NOMBRE', 'DIAGNOSTICO 3']:
+        elif c_clean in ['DX3NOMBRE', 'DX3 NOMBRE', 'DIAGNOSTICO 3']:
             columnas_nuevas.append('Dx3Nombre')
-        elif c == 'CAMA':
+        elif c_clean == 'CAMA':
             columnas_nuevas.append('CAMA')
-        elif c == 'SEXO':
+        elif c_clean == 'SEXO':
             columnas_nuevas.append('Sexo')
-        elif c in ['FECHANACIMIENTO', 'FECHA DE NACIMIENTO', 'FECNACIMIENTO']:
+        elif c_clean in ['FECHANACIMIENTO', 'FECHA DE NACIMIENTO', 'FECNACIMIENTO']:
             columnas_nuevas.append('FechaNacimiento')
-        elif c in ['IDENTIFICACION', 'NUM DOC', 'TFCEDU', 'NOINGRESO', 'NUMERO DOCUMENTO', 'NRO DOCUMENTO']:
+        elif c_clean in ['IDENTIFICACION', 'NUM DOC', 'TFCEDU', 'NOINGRESO', 'NUMERO DOCUMENTO', 'NRO DOCUMENTO']:
             columnas_nuevas.append('Identificacion')
-        elif c in ['PACIENTE', 'NOMBRE1', 'NOMBRES', 'NOMBRE']:
+        elif c_clean in ['PACIENTE', 'NOMBRE1', 'NOMBRES', 'NOMBRE']:
             columnas_nuevas.append('Paciente_Nombre')
-        elif c in ['APELLIDO1', 'APELLIDOS', 'APELLIDO']:
+        elif c_clean in ['APELLIDO1', 'APELLIDOS', 'APELLIDO']:
             columnas_nuevas.append('Paciente_Apellido')
         else:
             columnas_nuevas.append(str(col).strip())
@@ -163,7 +177,7 @@ def estandarizar_columnas(df):
     df.columns = columnas_nuevas
     return df
 
-def clasificar_ubicacion_visual_desde_cama(cama):
+def clasificar_pabellon(cama):
     if pd.isna(cama):
         return "DESCONOCIDO"
 
@@ -179,90 +193,39 @@ def clasificar_ubicacion_visual_desde_cama(cama):
     if cama in tercer_piso:
         return "TERCER PISO"
 
-    cuarto_piso = [str(i) for i in range(401, 426)] + [
+    cuarto_piso = [str(i) for i in range(401, 416)] + [
         "416A", "416B", "417A", "417B", "418A", "418B", "419A", "419B",
-        "420A", "420B", "423A", "423B", "424A", "424B", "425A", "425B"
+        "420A", "420B", "421", "422", "423A", "423B", "424A", "424B",
+        "425A", "425B", "426"
     ]
     if cama in cuarto_piso:
         return "CUARTO PISO"
 
-    if cama.startswith("UCI"):
-        return "UCI"
-    if cama.startswith("UCE"):
-        return "UCE"
+    if cama.startswith("UCI") or cama.startswith("UCE"):
+        return "CUIDADO CRITICO"
+
     if cama.startswith(("AU", "PAS", "PED", "REA", "SI", "YES", "H2")):
         return "URGENCIAS"
 
     return "DESCONOCIDO"
 
-def homologar_pabellon_modelo(texto):
-    """
-    Convierte ubicaciones reales / textos libres a categorías más cercanas
-    a las que razonablemente usó el modelo en entrenamiento.
-    """
-    txt = normalizar_texto(texto)
+def preparar_pabellon(df):
+    # Conserva la lógica original
+    if 'PabellonIngreso_Primario' in df.columns:
+        df['PabellonIngreso'] = df['PabellonIngreso_Primario']
+    elif 'PabellonIngreso_Secundario' in df.columns:
+        df['PabellonIngreso'] = df['PabellonIngreso_Secundario']
 
-    if txt == "":
-        return "HOSPITALIZACION"
+    if 'PabellonIngreso' not in df.columns and 'CAMA' in df.columns:
+        df['PabellonIngreso'] = df['CAMA'].apply(clasificar_pabellon)
+    elif 'PabellonIngreso' in df.columns and 'CAMA' in df.columns:
+        mascara_vacios = df['PabellonIngreso'].isna() | (df['PabellonIngreso'].astype(str).str.strip() == '')
+        df.loc[mascara_vacios, 'PabellonIngreso'] = df.loc[mascara_vacios, 'CAMA'].apply(clasificar_pabellon)
 
-    # Críticos
-    if any(k in txt for k in ["UCI", "CUIDADO CRITICO", "CUIDADO CRÍTICO", "CRITICO", "CRÍTICO", "UCE"]):
-        return "UCI"
+    if 'PabellonIngreso' not in df.columns:
+        df['PabellonIngreso'] = "DESCONOCIDO"
 
-    # Urgencias / observación / triage
-    if any(k in txt for k in ["URGEN", "OBSERV", "TRIAGE", "REA", "PASILLO", "YES", "AU", "PED"]):
-        return "URGENCIAS"
-
-    # Quirúrgicos
-    if any(k in txt for k in ["CIRUG", "QUIR", "SALA DE CIRUGIA", "SALA DE CIRUGÍA"]):
-        return "CIRUGIA"
-
-    # Pisos / hospitalización
-    if any(k in txt for k in [
-        "PISO", "HOSPITAL", "MEDICINA", "HEMATO", "ONCO", "ORTO", "GINECO",
-        "CUARTO PISO", "TERCER PISO", "SEGUNDO PISO"
-    ]):
-        return "HOSPITALIZACION"
-
-    return "HOSPITALIZACION"
-
-def preparar_pabellones(df):
-    # Ubicación visual real
-    if 'PabellonActual' not in df.columns:
-        df['PabellonActual'] = ""
-
-    if 'PabellonIngresoOriginal' not in df.columns:
-        df['PabellonIngresoOriginal'] = ""
-
-    if 'CAMA' in df.columns:
-        ubicacion_por_cama = df['CAMA'].apply(clasificar_ubicacion_visual_desde_cama)
-    else:
-        ubicacion_por_cama = pd.Series(["DESCONOCIDO"] * len(df), index=df.index)
-
-    # Prioridad para visualización: actual > ingreso > cama
-    df['PabellonVisual'] = (
-        df['PabellonActual'].fillna("").astype(str).str.strip()
-    )
-    mascara_vacia_visual = df['PabellonVisual'].eq("")
-    df.loc[mascara_vacia_visual, 'PabellonVisual'] = (
-        df.loc[mascara_vacia_visual, 'PabellonIngresoOriginal'].fillna("").astype(str).str.strip()
-    )
-
-    mascara_vacia_visual = df['PabellonVisual'].eq("")
-    df.loc[mascara_vacia_visual, 'PabellonVisual'] = ubicacion_por_cama[mascara_vacia_visual]
-
-    df['PabellonVisual'] = df['PabellonVisual'].fillna("DESCONOCIDO").astype(str).str.upper()
-
-    # Campo específico para el modelo
-    fuente_modelo = df['PabellonActual'].fillna("").astype(str).str.strip()
-    mascara_vacia_modelo = fuente_modelo.eq("")
-    fuente_modelo.loc[mascara_vacia_modelo] = df['PabellonIngresoOriginal'].fillna("").astype(str).str.strip()[mascara_vacia_modelo]
-
-    mascara_vacia_modelo = fuente_modelo.eq("")
-    fuente_modelo.loc[mascara_vacia_modelo] = ubicacion_por_cama[mascara_vacia_modelo]
-
-    df['PabellonIngreso'] = fuente_modelo.apply(homologar_pabellon_modelo)
-
+    df['PabellonIngreso'] = df['PabellonIngreso'].fillna("DESCONOCIDO").astype(str).str.upper()
     return df
 
 def preparar_edad(df):
@@ -295,16 +258,10 @@ def preparar_campos_basicos(df):
         df['Dx'] = ""
     df['Dx'] = df['Dx'].fillna("").astype(str).str.strip().str.upper()
 
-    if 'DxNombrePrincipal' not in df.columns:
-        df['DxNombrePrincipal'] = ""
-    if 'Dx2Nombre' not in df.columns:
-        df['Dx2Nombre'] = ""
-    if 'Dx3Nombre' not in df.columns:
-        df['Dx3Nombre'] = ""
-
-    df['DxNombrePrincipal'] = df['DxNombrePrincipal'].fillna("").astype(str).str.upper()
-    df['Dx2Nombre'] = df['Dx2Nombre'].fillna("").astype(str).str.upper()
-    df['Dx3Nombre'] = df['Dx3Nombre'].fillna("").astype(str).str.upper()
+    for col in ['DxNombrePrincipal', 'Dx2Nombre', 'Dx3Nombre']:
+        if col not in df.columns:
+            df[col] = ""
+        df[col] = df[col].fillna("").astype(str).str.upper()
 
     return df
 
@@ -319,16 +276,13 @@ def preparar_dias_actuales(df):
     return df
 
 def construir_texto_dx(df):
-    piezas = [
-        df.get('Dx', pd.Series("", index=df.index)).fillna("").astype(str).str.upper(),
-        df.get('DxNombrePrincipal', pd.Series("", index=df.index)).fillna("").astype(str).str.upper(),
-        df.get('Dx2Nombre', pd.Series("", index=df.index)).fillna("").astype(str).str.upper(),
-        df.get('Dx3Nombre', pd.Series("", index=df.index)).fillna("").astype(str).str.upper(),
-    ]
-    texto = piezas[0]
-    for serie in piezas[1:]:
-        texto = texto + " " + serie
-    return texto.str.replace(r"\s+", " ", regex=True).str.strip()
+    texto = (
+        df['Dx'].fillna("").astype(str).str.upper() + " " +
+        df['DxNombrePrincipal'].fillna("").astype(str).str.upper() + " " +
+        df['Dx2Nombre'].fillna("").astype(str).str.upper() + " " +
+        df['Dx3Nombre'].fillna("").astype(str).str.upper()
+    )
+    return texto.str.replace(r'\s+', ' ', regex=True).str.strip()
 
 def construir_variables_modelo(df, version_modelo_local):
     if version_modelo_local in ["V2", "V3", "V4"]:
@@ -336,7 +290,7 @@ def construir_variables_modelo(df, version_modelo_local):
 
         df['Diabetes'] = df['Texto_Dx'].str.contains(r'DIABETES', na=False).astype(int)
         df['Hipertension'] = df['Texto_Dx'].str.contains(r'HIPERTENSION|HIPERTENSI[ÓO]N|HTA|PRESION ALTA', na=False).astype(int)
-        df['Cardiaca'] = df['Texto_Dx'].str.contains(r'CARDIAC|INFARTO|ISQUEMI|FALLA CARDIACA|INSUFICIENCIA CARDIACA', na=False).astype(int)
+        df['Cardiaca'] = df['Texto_Dx'].str.contains(r'CARDIAC|INFARTO|ISQUEMI|FALLA|INSUFICIENCIA CARDIACA', na=False).astype(int)
         df['EPOC'] = df['Texto_Dx'].str.contains(r'EPOC|PULMONAR OBSTRUCTIVA', na=False).astype(int)
         df['Hemato_Onco'] = df['Texto_Dx'].str.contains(r'CANCER|CÁNCER|TUMOR|LEUCEMIA|LINFOMA|NEOPLASIA|MALIGN|HEMATO|ONCO', na=False).astype(int)
         df['Quimio'] = df['Texto_Dx'].str.contains(r'QUIMIO|QUIMIOTERAP', na=False).astype(int)
@@ -351,9 +305,12 @@ def construir_variables_modelo(df, version_modelo_local):
         ]
         df['Total_Comorbilidades'] = df[cols_enfermedades].sum(axis=1)
 
-        digits = 4 if version_modelo_local in ["V3", "V4"] else 3
-        df['Dx_Agrupado'] = df['Dx'].astype(str).str[:digits]
-        df['Dx_Agrupado'] = df['Dx_Agrupado'].replace("", "DESCONOCIDO")
+        if 'Dx' in df.columns:
+            digits = 4 if version_modelo_local in ["V3", "V4"] else 3
+            df['Dx_Agrupado'] = df['Dx'].astype(str).str[:digits]
+            df['Dx_Agrupado'] = df['Dx_Agrupado'].replace("", "DESCONOCIDO")
+        else:
+            df['Dx_Agrupado'] = "DESCONOCIDO"
 
         columnas_x = [
             'edad', 'Sexo', 'PabellonIngreso', 'Esp', 'Dx_Agrupado',
@@ -361,46 +318,39 @@ def construir_variables_modelo(df, version_modelo_local):
             'Quimio', 'Hemofilia', 'Porfiria', 'Renal', 'VIH', 'Total_Comorbilidades'
         ]
     else:
-        df['Dx_Agrupado'] = df['Dx'].astype(str).str[:3].replace("", "DESCONOCIDO")
+        if 'Dx' in df.columns:
+            df['Dx_Agrupado'] = df['Dx'].astype(str).str[:3]
+            df['Dx_Agrupado'] = df['Dx_Agrupado'].replace("", "DESCONOCIDO")
+        else:
+            df['Dx_Agrupado'] = "DESCONOCIDO"
+
         if 'Complejidad' not in df.columns:
             df['Complejidad'] = 0
+
         columnas_x = ['edad', 'Sexo', 'PabellonIngreso', 'Esp', 'Dx_Agrupado', 'Complejidad']
 
     return df, columnas_x
-
-def limitar_predicciones_v4(df):
-    """
-    No capamos ni manipulamos fuerte el modelo.
-    Solo evitamos cosas absurdas como negativos o casi cero.
-    """
-    df['Prediccion_Estancia'] = pd.to_numeric(df['Prediccion_Estancia'], errors='coerce')
-    df.loc[df['Prediccion_Estancia'] < 0.5, 'Prediccion_Estancia'] = 0.5
-    return df
 
 def auditar_predicciones(df, version_modelo_local):
     alertas = []
     riesgo_prolongado = 0
 
     if version_modelo_local == "V4":
-        df = limitar_predicciones_v4(df)
+        df['Prediccion_Estancia_Raw'] = pd.to_numeric(df['Prediccion_Estancia'], errors='coerce')
 
-        df['Prediccion_Estancia_Texto'] = df['Prediccion_Estancia'].apply(
+        # evita negativos absurdos, sin tocar la lógica real
+        df.loc[df['Prediccion_Estancia_Raw'] < 0, 'Prediccion_Estancia_Raw'] = 0
+
+        df['Prediccion_Estancia_Mostrar'] = df['Prediccion_Estancia_Raw'].apply(
             lambda x: f"{x:.1f} días" if pd.notna(x) else "No disponible"
         )
 
-        def categorizar_estancia(x):
-            if pd.isna(x):
-                return "Sin predicción"
-            if x < 3:
-                return "Estancia Corta (<3 días)"
-            elif x <= 7:
-                return "Estancia Media (3 a 7 días)"
-            return "Estancia Prolongada (>7 días)"
-
-        df['Categoria_Estancia'] = df['Prediccion_Estancia'].apply(categorizar_estancia)
+        # La gráfica vuelve a verse como tu versión original:
+        # cuenta cada valor exacto en días, no categorías agregadas
+        df['Prediccion_Estancia_Grafica'] = df['Prediccion_Estancia_Mostrar']
 
         for _, row in df.iterrows():
-            dias_pred = row.get('Prediccion_Estancia', None)
+            dias_pred = row.get('Prediccion_Estancia_Raw', None)
             dias_actuales = row.get('Dias_Actuales', 0)
 
             if pd.notna(dias_pred) and dias_pred > 7:
@@ -410,9 +360,11 @@ def auditar_predicciones(df, version_modelo_local):
                 alertas.append("Desviado - Límite Superado")
             else:
                 alertas.append("Normal - Dentro del límite estimado")
+
     else:
-        df['Prediccion_Estancia_Texto'] = df['Prediccion_Estancia'].astype(str)
-        df['Categoria_Estancia'] = df['Prediccion_Estancia'].astype(str)
+        df['Prediccion_Estancia_Raw'] = df['Prediccion_Estancia']
+        df['Prediccion_Estancia_Mostrar'] = df['Prediccion_Estancia'].astype(str)
+        df['Prediccion_Estancia_Grafica'] = df['Prediccion_Estancia_Mostrar']
 
         for _, row in df.iterrows():
             pred = str(row.get('Prediccion_Estancia', ''))
@@ -438,7 +390,6 @@ def exportar_excel_estilizado(df_mostrar):
         df_mostrar.to_excel(writer, index=False, sheet_name='Censo_Auditable')
         worksheet = writer.sheets['Censo_Auditable']
 
-        # Encabezados
         fill_header = PatternFill(fill_type="solid", fgColor="253d5b")
         font_header = Font(color="FFFFFF", bold=True)
 
@@ -446,7 +397,6 @@ def exportar_excel_estilizado(df_mostrar):
             cell.fill = fill_header
             cell.font = font_header
 
-        # Ajuste de ancho
         for idx, col in enumerate(df_mostrar.columns, start=1):
             max_len = max(
                 df_mostrar[col].astype(str).map(len).max() if len(df_mostrar) > 0 else 0,
@@ -454,7 +404,6 @@ def exportar_excel_estilizado(df_mostrar):
             ) + 2
             worksheet.column_dimensions[get_column_letter(idx)].width = min(max_len, 40)
 
-        # Resaltado de desviados
         estado_col_idx = None
         for idx, col in enumerate(df_mostrar.columns, start=1):
             if col == 'Estado_Auditoria':
@@ -471,11 +420,8 @@ def exportar_excel_estilizado(df_mostrar):
 
     return buffer.getvalue()
 
-# =========================================================
-# 4. ENCABEZADO
-# =========================================================
+# 4. ENCABEZADO CON LOGO
 col_logo, col_tit = st.columns([1, 6])
-
 with col_logo:
     if os.path.exists("Logo_Clinica.png"):
         st.image("Logo_Clinica.png", width="stretch")
@@ -485,7 +431,6 @@ with col_logo:
 with col_tit:
     st.title("Sistema de Alerta Temprana y Gestión de Camas")
     st.markdown("Plataforma analítica para la predicción de estancia hospitalaria (Length of Stay).")
-
     if version_modelo == "V4":
         st.caption("Motor Predictivo: Versión 4.0 (Regresor Numérico Exacto en Días)")
     elif version_modelo == "V3":
@@ -497,9 +442,7 @@ with col_tit:
 
 st.markdown("---")
 
-# =========================================================
-# 5. NAVEGACIÓN
-# =========================================================
+# 5. CREACIÓN DE NAVEGACIÓN
 selected = option_menu(
     menu_title=None,
     options=["Paciente Individual", "Auditoría Masiva"],
@@ -524,16 +467,13 @@ selected = option_menu(
             "font-weight": "600",
             "color": "#4e6c9f"
         },
-        "nav-link-selected": {
-            "background-color": "#253d5b",
-            "color": "white"
-        },
+        "nav-link-selected": {"background-color": "#253d5b", "color": "white"},
     }
 )
 
-# =========================================================
-# PESTAÑA 1: PACIENTE INDIVIDUAL
-# =========================================================
+# ==========================================
+# PESTAÑA 1: PREDICCIÓN INDIVIDUAL
+# ==========================================
 if selected == "Paciente Individual":
     st.subheader("Ingreso de Paciente a Urgencias / Piso")
 
@@ -541,14 +481,9 @@ if selected == "Paciente Individual":
     with col1:
         edad = st.number_input("Edad del paciente", min_value=0, max_value=120, value=45)
         sexo = st.selectbox("Sexo", ["M", "F"])
-
     with col2:
-        pabellon = st.selectbox(
-            "Servicio / Pabellón",
-            ["URGENCIAS", "CIRUGIA", "UCI", "HOSPITALIZACION", "TRIAGE"]
-        )
+        pabellon = st.selectbox("Servicio / Pabellón", ["URGENCIAS", "CIRUGIA", "UCI", "HOSPITALIZACION", "TRIAGE"])
         esp = st.text_input("Especialidad (Ej. MEDICINA INTERNA)", "MEDICINA INTERNA").upper().strip()
-
     with col3:
         dx = st.text_input("Dx Principal CIE-10 (Hasta 4 letras, ej. J450)", "OTR").upper().strip()[:4]
 
@@ -575,10 +510,7 @@ if selected == "Paciente Individual":
     st.markdown("<br>", unsafe_allow_html=True)
 
     if st.button("Calcular Riesgo de Estancia", key="btn_indiv"):
-        total_comorbilidades = sum([
-            diabetes, hipertension, cardiaca, epoc, hemato_onco,
-            quimio, hemofilia, porfiria, renal, vih
-        ])
+        total_comorbilidades = sum([diabetes, hipertension, cardiaca, epoc, hemato_onco, quimio, hemofilia, porfiria, renal, vih])
 
         if version_modelo in ["V2", "V3", "V4"]:
             datos = pd.DataFrame({
@@ -614,29 +546,28 @@ if selected == "Paciente Individual":
         prediccion = modelo.predict(datos_finales)[0]
 
         st.markdown("---")
-        st.subheader("Resultado Clínico")
+        st.subheader("Resultado Clínico:")
 
         if version_modelo == "V4":
-            dias_estimados = max(0.5, float(prediccion))
-
+            dias_estimados = float(prediccion)
             if dias_estimados > 7:
-                st.error(f"🚨 **ALERTA - Riesgo de Ocupación Prolongada**\n\n📍 Estancia estimada: **{dias_estimados:.1f} días**.")
+                st.error(f"🚨 **ALERTA - Riesgo de Ocupación Prolongada.**\n\n📍 Estancia estimada: **{dias_estimados:.1f} días**.")
             elif dias_estimados > 3:
-                st.warning(f"🟡 **PRECAUCIÓN - Monitoreo estándar requerido**\n\n📍 Estancia estimada: **{dias_estimados:.1f} días**.")
+                st.warning(f"🟡 **PRECAUCIÓN - Monitoreo estándar requerido.**\n\n📍 Estancia estimada: **{dias_estimados:.1f} días**.")
             else:
-                st.success(f"🟢 **ÓPTIMO - Flujo rápido esperado**\n\n📍 Estancia estimada: **{dias_estimados:.1f} días**.")
+                st.success(f"🟢 **ÓPTIMO - Flujo rápido esperado.**\n\n📍 Estancia estimada: **{dias_estimados:.1f} días**.")
         else:
-            pred_texto = str(prediccion)
-            if "Corta" in pred_texto:
-                st.success(f"{pred_texto} - Flujo rápido esperado. Planear alta temprana.")
-            elif "Media" in pred_texto:
-                st.warning(f"{pred_texto} - Monitoreo estándar requerido.")
+            pred_txt = str(prediccion)
+            if "CORTA" in pred_txt.upper():
+                st.success(f"{pred_txt} - Flujo rápido esperado. Planear alta temprana.")
+            elif "MEDIA" in pred_txt.upper():
+                st.warning(f"{pred_txt} - Monitoreo estándar requerido.")
             else:
-                st.error(f"{pred_texto} - ALERTA: Alto riesgo de ocupación prolongada. Requiere revisión de caso.")
+                st.error(f"{pred_txt} - ALERTA: Alto riesgo de ocupación prolongada. Requiere revisión de caso.")
 
-# =========================================================
-# PESTAÑA 2: AUDITORÍA MASIVA
-# =========================================================
+# ==========================================
+# PESTAÑA 2: CARGA MASIVA (CENSO)
+# ==========================================
 if selected == "Auditoría Masiva":
     st.subheader("Proyección del Censo Actual")
     st.write("Sube el archivo Excel o CSV del censo matutino para predecir las estancias detectando pacientes desviados.")
@@ -645,31 +576,31 @@ if selected == "Auditoría Masiva":
 
     if archivo_subido is not None:
         try:
-            # 1. Lectura
+            # Leer archivo
             df_censo = leer_archivo_subido(archivo_subido)
             st.info(f"Se cargaron {len(df_censo)} pacientes del censo.")
 
-            # 2. Estandarización y limpieza
+            # ESTANDARIZACIÓN
             df_censo = estandarizar_columnas(df_censo)
-            df_censo = preparar_pabellones(df_censo)
+            df_censo = preparar_pabellon(df_censo)
             df_censo = preparar_edad(df_censo)
             df_censo = preparar_campos_basicos(df_censo)
             df_censo = preparar_dias_actuales(df_censo)
 
-            # 3. Variables del modelo
+            # VARIABLES PARA MODELO
             df_censo, columnas_x = construir_variables_modelo(df_censo, version_modelo)
 
             col_disponibles = [c for c in columnas_x if c in df_censo.columns]
             X_masivo = df_censo[col_disponibles].copy()
             X_masivo_encoded = pd.get_dummies(X_masivo).reindex(columns=columnas_entrenamiento, fill_value=0)
 
-            # 4. Predicción
+            # PREDICCIÓN
             df_censo['Prediccion_Estancia'] = modelo.predict(X_masivo_encoded)
 
-            # 5. Auditoría
+            # AUDITORÍA
             df_censo, riesgo_prolongado, alertas = auditar_predicciones(df_censo, version_modelo)
 
-            # 6. KPIs
+            # TABLERO
             st.markdown("### 📊 Tablero de Control de Riesgo y Ocupación")
 
             total_pacientes = len(df_censo)
@@ -685,95 +616,56 @@ if selected == "Auditoría Masiva":
             )
             kpi3.metric(label="Predicción Estancias Prolongadas", value=riesgo_prolongado)
 
-            # 7. Gráficos
             st.markdown("<br>", unsafe_allow_html=True)
             col_chart1, col_chart2 = st.columns(2)
 
             with col_chart1:
-                if version_modelo == "V4":
-                    categorias_orden = [
-                        'Estancia Corta (<3 días)',
-                        'Estancia Media (3 a 7 días)',
-                        'Estancia Prolongada (>7 días)',
-                        'Sin predicción'
-                    ]
-                    df_censo['Categoria_Estancia'] = pd.Categorical(
-                        df_censo['Categoria_Estancia'],
-                        categories=categorias_orden,
-                        ordered=True
-                    )
+                # Gráfica como tu versión original:
+                # conteo de cada predicción exacta ya formateada en "x.x días"
+                riesgo_counts = df_censo['Prediccion_Estancia_Grafica'].value_counts(dropna=False).reset_index()
+                riesgo_counts.columns = ['Predicción de Estancia', 'Cantidad']
 
-                    riesgo_counts = (
-                        df_censo['Categoria_Estancia']
-                        .value_counts(dropna=False)
-                        .reindex(categorias_orden, fill_value=0)
-                        .reset_index()
-                    )
-                    riesgo_counts.columns = ['Categoría de Estancia', 'Cantidad']
-                    riesgo_counts = riesgo_counts[riesgo_counts['Cantidad'] > 0].copy()
-
-                    fig_pie = px.pie(
-                        riesgo_counts,
-                        values='Cantidad',
-                        names='Categoría de Estancia',
-                        title='Distribución de Riesgo de Estancia',
-                        color='Categoría de Estancia',
-                        color_discrete_map={
-                            'Estancia Corta (<3 días)': '#4e6c9f',
-                            'Estancia Media (3 a 7 días)': '#b6b5af',
-                            'Estancia Prolongada (>7 días)': '#253d5b',
-                            'Sin predicción': '#d9d9d9'
-                        },
-                        hole=0.25
-                    )
-                else:
-                    riesgo_counts = df_censo['Prediccion_Estancia'].astype(str).value_counts(dropna=False).reset_index()
-                    riesgo_counts.columns = ['Categoría de Estancia', 'Cantidad']
-
-                    fig_pie = px.pie(
-                        riesgo_counts,
-                        values='Cantidad',
-                        names='Categoría de Estancia',
-                        title='Distribución de Riesgo de Estancia',
-                        hole=0.25
-                    )
-
+                fig_pie = px.pie(
+                    riesgo_counts,
+                    values='Cantidad',
+                    names='Predicción de Estancia',
+                    title='Distribución de Riesgo de Estancia'
+                )
                 fig_pie.update_traces(textposition='inside', textinfo='percent+label')
-                fig_pie.update_layout(margin=dict(t=40, b=0, l=0, r=0), legend_title_text='')
+                fig_pie.update_layout(margin=dict(t=40, b=0, l=0, r=0))
                 st.plotly_chart(fig_pie, width="stretch")
 
             with col_chart2:
-                desviados_df = df_censo[df_censo['Estado_Auditoria'].str.contains("Desviado", na=False)]
-                pabellon_counts = desviados_df['PabellonVisual'].value_counts().reset_index()
-                pabellon_counts.columns = ['Pabellón', 'Pacientes Desviados']
+                if 'PabellonIngreso' in df_censo.columns:
+                    desviados_df = df_censo[df_censo['Estado_Auditoria'].str.contains("Desviado", na=False)]
+                    pabellon_counts = desviados_df['PabellonIngreso'].value_counts().reset_index()
+                    pabellon_counts.columns = ['Pabellón', 'Pacientes Desviados']
 
-                if len(pabellon_counts) > 0:
-                    fig_bar = px.bar(
-                        pabellon_counts,
-                        x='Pabellón',
-                        y='Pacientes Desviados',
-                        title='Alarmas de Desviación por Pabellón',
-                        color_discrete_sequence=['#253d5b']
-                    )
-                    fig_bar.update_layout(xaxis_tickangle=-45, margin=dict(t=40, b=0, l=0, r=0))
-                    st.plotly_chart(fig_bar, width="stretch")
+                    if len(pabellon_counts) > 0:
+                        fig_bar = px.bar(
+                            pabellon_counts,
+                            x='Pabellón',
+                            y='Pacientes Desviados',
+                            title='Alarmas de Desviación por Pabellón',
+                            color_discrete_sequence=['#253d5b']
+                        )
+                        fig_bar.update_layout(xaxis_tickangle=-45, margin=dict(t=40, b=0, l=0, r=0))
+                        st.plotly_chart(fig_bar, width="stretch")
+                    else:
+                        st.info("No hay pacientes desviados para graficar por pabellón.")
                 else:
-                    st.info("No hay pacientes desviados para graficar por pabellón.")
+                    st.info("El gráfico de Pabellones requiere la columna 'PabellonIngreso' o 'PabActual'.")
 
-            # 8. Radiografía por servicio
+            # MINI GRÁFICOS
             st.markdown("---")
-            st.markdown("### 🏥 Radiografía por Servicio Individual (Ubicación Actual / Visual)")
+            st.markdown("### 🏥 Radiografía por Servicio Individual (Pabellón Actual)")
 
-            pabellones = sorted([
-                p for p in df_censo['PabellonVisual'].dropna().unique()
-                if str(p).strip() != ""
-            ])
-
-            if len(pabellones) > 0:
+            if 'PabellonIngreso' in df_censo.columns:
+                pabellones = [p for p in df_censo['PabellonIngreso'].unique() if pd.notna(p) and str(p).strip() != ""]
                 cols_pab = st.columns(3)
 
                 for i, pab in enumerate(pabellones):
-                    df_pab = df_censo[df_censo['PabellonVisual'] == pab]
+                    df_pab = df_censo[df_censo['PabellonIngreso'] == pab]
                     if len(df_pab) == 0:
                         continue
 
@@ -785,7 +677,7 @@ if selected == "Auditoría Masiva":
                         values='Cant',
                         names='Estado',
                         hole=0.5,
-                        title=f'{str(pab)[:24]} ({len(df_pab)})',
+                        title=f'{str(pab)[:20]} ({len(df_pab)})',
                         color='Estado',
                         color_discrete_map={
                             'Normal - Dentro del límite estimado': '#b6b5af',
@@ -796,7 +688,7 @@ if selected == "Auditoría Masiva":
                     fig_mini.update_layout(
                         showlegend=False,
                         margin=dict(t=30, b=10, l=10, r=10),
-                        height=220,
+                        height=200,
                         title_x=0.5,
                         title_font_size=13
                     )
@@ -804,27 +696,20 @@ if selected == "Auditoría Masiva":
                     with cols_pab[i % 3]:
                         st.plotly_chart(fig_mini, width="stretch")
 
-            # 9. Detalle nominal
+            # DETALLE NOMINAL
             st.markdown("---")
             st.markdown("### 📋 Detalle Nominal de Auditoría")
 
             columnas_mostrar = [
-                'Identificacion',
-                'Paciente_Nombre',
-                'Paciente_Apellido',
-                'CAMA',
-                'edad',
-                'PabellonVisual',
-                'PabellonIngreso',
-                'Esp',
-                'Dx_Agrupado',
-                'FechaIngreso',
-                'Dias_Actuales',
-                'Prediccion_Estancia_Texto',
-                'Estado_Auditoria'
+                'Identificacion', 'Paciente_Nombre', 'Paciente_Apellido', 'CAMA',
+                'edad', 'PabellonIngreso', 'Dx_Agrupado', 'FechaIngreso',
+                'Dias_Actuales', 'Prediccion_Estancia_Mostrar', 'Estado_Auditoria'
             ]
             columnas_disponibles = [c for c in columnas_mostrar if c in df_censo.columns]
             df_mostrar = df_censo[columnas_disponibles].copy()
+
+            if 'Prediccion_Estancia_Mostrar' in df_mostrar.columns:
+                df_mostrar = df_mostrar.rename(columns={'Prediccion_Estancia_Mostrar': 'Prediccion_Estancia'})
 
             def resaltar_filas(row):
                 if 'Desviado' in str(row.get('Estado_Auditoria', '')):
@@ -837,7 +722,7 @@ if selected == "Auditoría Masiva":
 
             st.dataframe(styled_df, width="stretch")
 
-            # 10. Descarga
+            # EXPORTAR
             excel_data = exportar_excel_estilizado(df_mostrar)
 
             st.download_button(
