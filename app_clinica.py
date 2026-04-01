@@ -445,7 +445,7 @@ for index, row in df_censo.iterrows():
             
             with col_chart1:
                 # Gráfico de Pastel: Distribución de Riesgos Predictivos
-                riesgo_counts = df_censo['Prediccion_Estancia'].value_counts().reset_index()
+                riesgo_counts = df_censo['Categoria_Estancia'].value_counts().reset_index()
                 riesgo_counts.columns = ['Categoría de Estancia', 'Cantidad']
                 
                 fig_pie = px.pie(riesgo_counts, values='Cantidad', names='Categoría de Estancia', 
@@ -506,7 +506,7 @@ for index, row in df_censo.iterrows():
 
             st.markdown("---")
             st.markdown("### 📋 Detalle Nominal de Auditoría")
-            columnas_mostrar = ['Identificacion', 'Paciente_Nombre', 'Paciente_Apellido', 'CAMA', 'edad', 'PabellonIngreso', 'Dx_Agrupado', 'FechaIngreso', 'Dias_Actuales', 'Prediccion_Estancia', 'Estado_Auditoria']
+            columnas_mostrar = ['Identificacion', 'Paciente_Nombre', 'Paciente_Apellido', 'CAMA', 'edad', 'PabellonIngreso', 'Dx_Agrupado', 'FechaIngreso', 'Dias_Actuales', 'Prediccion_Estancia_Texto', 'Estado_Auditoria']
             columnas_disponibles = [c for c in columnas_mostrar if c in df_censo.columns]
             
             df_mostrar = df_censo[columnas_disponibles]
